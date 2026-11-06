@@ -6,16 +6,16 @@ USPS tracking & subscription client with optional Firestore persistence.
 
 ```bash
 # Basic (API client + models only)
-pip install git+https://github.com/altissimo-io/usps-tracking.git
+pip install git+https://github.com/altissimo-hq/usps-tracking.git
 
 # With Firestore persistence
-pip install "usps-tracking[firestore] @ git+https://github.com/altissimo-io/usps-tracking.git"
+pip install "usps-tracking[firestore] @ git+https://github.com/altissimo-hq/usps-tracking.git"
 ```
 
 ## Quick Start
 
 ```python
-from usps_tracking import USPSClient
+from altissimo.usps_tracking import USPSClient
 
 client = USPSClient()  # reads USPS_CONSUMER_KEY, USPS_CONSUMER_SECRET from env
 detail = client.get_tracking_detail("9400111899223456789012")
@@ -25,7 +25,7 @@ print(detail.status_category)  # "In Transit", "Delivered", etc.
 ## With Firestore Persistence
 
 ```python
-from usps_tracking import USPSService
+from altissimo.usps_tracking import USPSService
 
 service = USPSService()
 
@@ -41,8 +41,8 @@ service.create_tracking_subscription("9400111899223456789012")
 Inject your own logic for when tracking data is updated via a webhook callback:
 
 ```python
-from usps_tracking import USPSService, USPSTrackingDetail
-from usps_tracking.models import TrackInfo
+from altissimo.usps_tracking import USPSService, USPSTrackingDetail
+from altissimo.usps_tracking.models import TrackInfo
 
 def handle_tracking_update(detail: USPSTrackingDetail, track_info: TrackInfo):
     if track_info.StatusCategory == "Delivered":
@@ -56,7 +56,7 @@ service = USPSService(on_tracking_update=handle_tracking_update)
 
 ```python
 from fastapi import FastAPI
-from usps_tracking.router import create_usps_router
+from altissimo.usps_tracking.router import create_usps_router
 
 app = FastAPI()
 

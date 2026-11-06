@@ -6,12 +6,12 @@ from datetime import datetime
 
 import pytest
 
-from usps_tracking.exceptions import (
+from altissimo.usps_tracking.exceptions import (
     USPSClientError,
     USPSTrackingDetailNotFoundError,
     USPSTrackingSubscriptionNotFoundError,
 )
-from usps_tracking.models import (
+from altissimo.usps_tracking.models import (
     CreateUSPSSubscription,
     USPSSubscription,
     USPSSubscriptionsResponse,
@@ -108,13 +108,13 @@ class FakeUSPSClient:
         return {"status": "ok"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_repo():
     """Provide a fresh FakeUSPSTrackingRepo for each test."""
     return FakeUSPSTrackingRepo()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_client():
     """Provide a fresh FakeUSPSClient for each test."""
     return FakeUSPSClient()
@@ -153,13 +153,13 @@ def _make_tracking_detail(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_tracking_detail() -> USPSTrackingDetail:
     """A representative USPS tracking detail."""
     return _make_tracking_detail()
 
 
-@pytest.fixture()
+@pytest.fixture
 def delivered_tracking_detail() -> USPSTrackingDetail:
     """A delivered USPS tracking detail."""
     return _make_tracking_detail(status="Delivered", status_category="Delivered")

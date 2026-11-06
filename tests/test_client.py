@@ -1,8 +1,9 @@
 """Unit tests for USPSClient."""
 
 import pytest
-from usps_tracking.client import USPSClient
-from usps_tracking.settings import USPSSettings
+
+from altissimo.usps_tracking.client import USPSClient
+from altissimo.usps_tracking.settings import USPSSettings
 
 pytestmark = pytest.mark.unit
 

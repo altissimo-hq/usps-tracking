@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from enum import Enum
-from typing import Annotated, Any, Literal
+from enum import StrEnum
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import AliasChoices, AliasPath, BaseModel, ConfigDict, Field, Json, model_validator
-from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class Address(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class StatusCategory(str, Enum):
+class StatusCategory(StrEnum):
     """USPS tracking status categories."""
 
     ACCEPTED = "Accepted"
@@ -289,7 +288,7 @@ class USPSSubscriptionsResponse(BaseModel):
     """USPS subscriptions list response."""
 
     subscriptions: list[USPSSubscription]
-    metadata: dict
+    metadata: dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +348,7 @@ class USPSTrackingDetail(_FiredanticBase):  # type: ignore[misc]
     origin_state: str | None = Field(None, validation_alias=AliasChoices("originState", "origin_state"))
     origin_zip: str | None = Field(None, validation_alias=AliasChoices("originZIP", "origin_zip"))
 
-    services: list[str] = []
+    services: list[str] = []  # noqa: RUF012 - pydantic field; defaults are copied per instance
     status: str
     status_category: str = Field(validation_alias=AliasChoices("statusCategory", "status_category"))
     status_summary: str = Field(validation_alias=AliasChoices("statusSummary", "status_summary"))
@@ -378,9 +377,8 @@ class USPSTrackingDetail(_FiredanticBase):  # type: ignore[misc]
     @model_validator(mode="after")
     def validate_id(self) -> Self:
         """Ensure the document ID is the tracking number."""
-        if hasattr(self, "id"):
-            if not self.id:  # type: ignore[has-type]
-                self.id = self.tracking_number  # type: ignore[has-type]
+        if hasattr(self, "id") and not self.id:  # type: ignore[has-type]
+            self.id = self.tracking_number
         if self.tracking_events:
             self.updated_at = self.tracking_events[0].gmt_timestamp or self.tracking_events[0].timestamp
         return self
@@ -422,9 +420,8 @@ class USPSTrackingSubscription(_FiredanticBase):  # type: ignore[misc]
     @model_validator(mode="after")
     def validate_id(self) -> Self:
         """Ensure the document ID is the subscription ID."""
-        if hasattr(self, "id"):
-            if not self.id:  # type: ignore[has-type]
-                self.id = self.subscription_id  # type: ignore[has-type]
+        if hasattr(self, "id") and not self.id:  # type: ignore[has-type]
+            self.id = self.subscription_id
         return self
 
     @classmethod

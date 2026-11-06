@@ -11,9 +11,8 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
 from datetime import datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from .exceptions import USPSTrackingSubscriptionNotFoundError
 from .models import (
@@ -30,6 +29,9 @@ from .models import (
 )
 from .repo import USPSTrackingRepo, USPSTrackingRepoProtocol
 from .settings import USPSServiceSettings
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ class USPSClientProtocol(Protocol):
 
     def get_subscription(self, usps_subscription_id: str) -> USPSSubscription: ...
 
-    def delete_subscription(self, usps_subscription_id: str, etag: str) -> dict: ...
+    def delete_subscription(self, usps_subscription_id: str, etag: str) -> dict[str, Any]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +92,7 @@ class USPSService:
 
     def _get_client(self) -> USPSClientProtocol:
         if self._client is None:
-            from .client import USPSClient  # noqa: PLC0415
+            from .client import USPSClient
 
             self._client = USPSClient()
         return self._client
@@ -109,7 +111,7 @@ class USPSService:
     # Callback Processing
     # -----------------------------------------------------------------
 
-    def process_subscriptions_callback(self, body: USPSSubscriptionNotification) -> dict:
+    def process_subscriptions_callback(self, body: USPSSubscriptionNotification) -> dict[str, Any]:
         """Process a USPS Subscriptions v3 callback.
 
         Parses the ``TrackInfo`` from the callback payload, saves the
@@ -127,7 +129,7 @@ class USPSService:
             raise ValueError("TrackInfo not found in payload")
         logger.debug("TrackInfo Data: %s", data.get("ID", "unknown"))
 
-        from pydantic_core import ValidationError  # noqa: PLC0415
+        from pydantic_core import ValidationError
 
         try:
             track_info = TrackInfo(**data)
@@ -189,7 +191,7 @@ class USPSService:
         self._get_repo().save_tracking_detail(usps_tracking_detail)
         return usps_tracking_detail
 
-    def delete_tracking_detail(self, tracking_number: str) -> dict:
+    def delete_tracking_detail(self, tracking_number: str) -> dict[str, Any]:
         """Delete a tracking detail from Firestore.
 
         Raises:
@@ -200,7 +202,7 @@ class USPSService:
         self._get_repo().delete_tracking_detail(tracking_detail)
         return {"id": tracking_number}
 
-    def process_tracking_details(self) -> dict:
+    def process_tracking_details(self) -> dict[str, Any]:
         """Re-fetch and persist all non-delivered tracking details."""
         logger.info("Processing USPS Tracking Details")
         for detail in sorted(self.list_tracking_details(), key=lambda x: x.updated_at or x.created_at):
@@ -251,13 +253,14 @@ class USPSService:
         logger.info("Done creating USPS Subscription for: %s", tracking_number)
         return tracking_subscription
 
-    def delete_tracking_subscription(self, usps_subscription_id: str) -> dict:
+    def delete_tracking_subscription(self, usps_subscription_id: str) -> dict[str, Any]:
         """Delete a subscription from USPS API and Firestore."""
         logger.info("Deleting USPS Tracking Subscription: %s", usps_subscription_id)
 
         try:
             subscription = self._get_client().get_subscription(usps_subscription_id)
-            assert subscription.etag
+            if not subscription.etag:
+                raise ValueError(f"USPS subscription {usps_subscription_id} has no etag")
             self._get_client().delete_subscription(usps_subscription_id, subscription.etag)
         except Exception:
             logger.exception("Error deleting USPS Subscription from API: %s", usps_subscription_id)
@@ -289,28 +292,31 @@ class USPSService:
             logger.info("Listing USPS Tracking Subscriptions for: %s", tracking_number)
         return self._get_repo().list_tracking_subscriptions(tracking_number)
 
-    def process_tracking_subscriptions(self) -> dict:
+    def process_tracking_subscriptions(self) -> dict[str, Any]:
         """Reconcile subscriptions — remove for delivered, create for active."""
         logger.info("Processing USPS Tracking Subscriptions")
 
-        tracking_details = {t.id: t for t in self._get_repo().list_tracking_details()}
+        tracking_details = {t.tracking_number: t for t in self._get_repo().list_tracking_details()}
         tracking_subscriptions = {t.tracking_number: t for t in self._get_repo().list_tracking_subscriptions()}
 
         # Remove subscriptions for delivered packages
         for tracking_number, subscription in tracking_subscriptions.items():
-            assert tracking_number
-            assert subscription.id
+            if not tracking_number or not subscription.subscription_id:
+                logger.warning("Skipping subscription with no tracking number or id: %s", subscription)
+                continue
             if tracking_number not in tracking_details:
                 logger.warning("Tracking number not found in details: %s", tracking_number)
                 continue
             detail = tracking_details[tracking_number]
             if detail.status_category == StatusCategory.DELIVERED.value:
                 logger.info("Deleting subscription for delivered package: %s", tracking_number)
-                self.delete_tracking_subscription(subscription.id)
+                self.delete_tracking_subscription(subscription.subscription_id)
 
         # Create subscriptions for active (non-delivered) packages
         for tracking_number, detail in tracking_details.items():
-            assert tracking_number
+            if not tracking_number:
+                logger.warning("Skipping tracking detail with no id: %s", detail)
+                continue
             if detail.status_category == StatusCategory.DELIVERED.value:
                 continue
             if tracking_number not in tracking_subscriptions:

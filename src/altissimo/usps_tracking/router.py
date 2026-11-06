@@ -7,12 +7,16 @@ Thin adapter — delegates all business logic to
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter
 
-from .models import USPSSubscriptionNotification, USPSTrackingDetail, TrackInfo
 from .service import USPSService
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    from .models import TrackInfo, USPSSubscriptionNotification, USPSTrackingDetail
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +30,7 @@ def create_usps_router(
 
     Usage::
 
-        from usps_tracking.router import create_usps_router
+        from altissimo.usps_tracking.router import create_usps_router
 
         def handle_update(detail, track_info):
             if track_info.StatusCategory == "Delivered":
@@ -39,7 +43,7 @@ def create_usps_router(
     service = USPSService(on_tracking_update=on_tracking_update)
 
     @router.post("/subscriptions")
-    async def subscriptions_callback(body: USPSSubscriptionNotification) -> dict:
+    async def subscriptions_callback(body: USPSSubscriptionNotification) -> dict[str, Any]:
         """Receive USPS Subscriptions v3 notification."""
         logger.info(
             "Received USPS subscription notification: %s [%s]",
