@@ -46,7 +46,8 @@ class USPSServiceSettings:
     """Settings for the USPS service layer."""
 
     listener_url: str
-    subscription_secret: str = "MySecretKeyPhraseIs32BytesLength"
+    # FIXME: a public default secret. Callers should pass their own; see the PR that added this note.
+    subscription_secret: str = "MySecretKeyPhraseIs32BytesLength"  # noqa: S105
     admin_notification_email: str = "admin@example.com"
 
     @classmethod

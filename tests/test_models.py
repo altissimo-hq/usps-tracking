@@ -2,7 +2,7 @@
 
 import pytest
 
-from usps_tracking.models import (
+from altissimo.usps_tracking.models import (
     Address,
     StatusCategory,
     USPSTrackingEvent,

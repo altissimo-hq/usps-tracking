@@ -2,13 +2,61 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 import pytest
 
-from usps_tracking.exceptions import USPSTrackingDetailNotFoundError
-from usps_tracking.service import USPSService
-from usps_tracking.settings import USPSServiceSettings
+from altissimo.usps_tracking.exceptions import USPSTrackingDetailNotFoundError
+from altissimo.usps_tracking.service import USPSService
+from altissimo.usps_tracking.settings import USPSServiceSettings
+
+
+def _callback_body(tracking_number: str) -> dict:
+    """A USPS subscription callback body for one in-transit package."""
+    track_info = {
+        "ID": tracking_number,
+        "Class": "PRIORITY_MAIL",
+        "EmailEnabled": True,
+        "KahalaIndicator": False,
+        "MailTypeCode": "DM",
+        "MPDATE": datetime.now().isoformat(),
+        "MPSUFFIX": 0,
+        "RestoreEnabled": True,
+        "PodEnabled": False,
+        "RramEnabled": False,
+        "RreEnabled": False,
+        "Service": ["Priority Mail"],
+        "ServiceTypeCode": "020",
+        "Status": "In Transit",
+        "StatusCategory": "In Transit",
+        "StatusSummary": "In Transit",
+        "TABLECODE": "T",
+        "TrackSummary": {
+            "EventTime": "10:00",
+            "EventDate": "2026-03-19",
+            "Event": "In Transit",
+            "EventCity": "Boston",
+            "EventState": "MA",
+            "EventZIPCode": "02101",
+            "EventCountry": "US",
+            "FirmName": "",
+            "Name": "",
+            "AuthorizedAgent": False,
+            "EventCode": "01",
+            "DeliveryAttributeCode": "",
+            "GMT": "15:00",
+            "GMTOffset": "-05:00",
+        },
+    }
+    return {
+        "subscriptionId": "sub-1",
+        "subscriptionType": "TRACKING",
+        "timestamp": datetime.now().isoformat(),
+        "payload": json.dumps({"TrackInfo": track_info}),
+        "links": [],
+    }
+
 
 pytestmark = pytest.mark.unit
 
@@ -144,19 +192,9 @@ class TestOnTrackingUpdateCallback:
         service = USPSService(client=fake_client, repo=fake_repo, on_tracking_update=capture)
 
         # Simulate callback payload
-        body_data = {
-            "subscriptionId": "sub-1",
-            "subscriptionType": "TRACKING",
-            "timestamp": datetime.now().isoformat(),
-            "payload": '{"TrackInfo": {"ID": "'
-            + sample_tracking_detail.tracking_number
-            + '", "Class": "PRIORITY_MAIL", "EmailEnabled": true, "KahalaIndicator": false, "MailTypeCode": "DM", "MPDATE": "'
-            + datetime.now().isoformat()
-            + '", "MPSUFFIX": 0, "RestoreEnabled": true, "PodEnabled": false, "RramEnabled": false, "RreEnabled": false, "Service": ["Priority Mail"], "ServiceTypeCode": "020", "Status": "In Transit", "StatusCategory": "In Transit", "StatusSummary": "In Transit", "TABLECODE": "T", "TrackSummary": {"EventTime": "10:00", "EventDate": "2026-03-19", "Event": "In Transit", "EventCity": "Boston", "EventState": "MA", "EventZIPCode": "02101", "EventCountry": "US", "FirmName": "", "Name": "", "AuthorizedAgent": false, "EventCode": "01", "DeliveryAttributeCode": "", "GMT": "15:00", "GMTOffset": "-05:00"}}}',
-            "links": [],
-        }
+        body_data = _callback_body(sample_tracking_detail.tracking_number)
 
-        from usps_tracking.models import USPSSubscriptionNotification
+        from altissimo.usps_tracking.models import USPSSubscriptionNotification
 
         body = USPSSubscriptionNotification(**body_data)
         result = service.process_subscriptions_callback(body)
@@ -169,19 +207,9 @@ class TestOnTrackingUpdateCallback:
         fake_client.add_tracking_detail(sample_tracking_detail.tracking_number, sample_tracking_detail)
         service = USPSService(client=fake_client, repo=fake_repo)
 
-        body_data = {
-            "subscriptionId": "sub-1",
-            "subscriptionType": "TRACKING",
-            "timestamp": datetime.now().isoformat(),
-            "payload": '{"TrackInfo": {"ID": "'
-            + sample_tracking_detail.tracking_number
-            + '", "Class": "PRIORITY_MAIL", "EmailEnabled": true, "KahalaIndicator": false, "MailTypeCode": "DM", "MPDATE": "'
-            + datetime.now().isoformat()
-            + '", "MPSUFFIX": 0, "RestoreEnabled": true, "PodEnabled": false, "RramEnabled": false, "RreEnabled": false, "Service": ["Priority Mail"], "ServiceTypeCode": "020", "Status": "In Transit", "StatusCategory": "In Transit", "StatusSummary": "In Transit", "TABLECODE": "T", "TrackSummary": {"EventTime": "10:00", "EventDate": "2026-03-19", "Event": "In Transit", "EventCity": "Boston", "EventState": "MA", "EventZIPCode": "02101", "EventCountry": "US", "FirmName": "", "Name": "", "AuthorizedAgent": false, "EventCode": "01", "DeliveryAttributeCode": "", "GMT": "15:00", "GMTOffset": "-05:00"}}}',
-            "links": [],
-        }
+        body_data = _callback_body(sample_tracking_detail.tracking_number)
 
-        from usps_tracking.models import USPSSubscriptionNotification
+        from altissimo.usps_tracking.models import USPSSubscriptionNotification
 
         body = USPSSubscriptionNotification(**body_data)
         result = service.process_subscriptions_callback(body)

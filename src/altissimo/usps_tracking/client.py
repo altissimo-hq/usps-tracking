@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta
+from typing import Any
 
 import requests
 
@@ -107,13 +108,14 @@ class USPSClient:
         method: str,
         url: str,
         *,
-        params: dict | None = None,
-        json_body: dict | None = None,
-        extra_headers: dict | None = None,
+        params: dict[str, Any] | None = None,
+        json_body: dict[str, Any] | None = None,
+        extra_headers: dict[str, Any] | None = None,
     ) -> requests.Response:
         """Make an authenticated request with automatic 401 retry."""
         self.authenticate()
-        assert self._credentials is not None
+        if self._credentials is None:
+            raise RuntimeError("USPS authentication returned no credentials")
 
         headers = {
             "Accept": "application/json",
@@ -138,7 +140,8 @@ class USPSClient:
             self._credentials = None
             self._token_expires_at = None
             self.authenticate()
-            assert self._credentials is not None
+            if self._credentials is None:
+                raise RuntimeError("USPS authentication returned no credentials")
             headers["Authorization"] = f"Bearer {self._credentials.access_token}"
             response = self._session.request(
                 method,
@@ -201,7 +204,7 @@ class USPSClient:
         logger.debug("USPS Subscription Created: %s [%s]", subscription.subscriptionId, subscription.etag)
         return subscription
 
-    def delete_subscription(self, usps_subscription_id: str, etag: str) -> dict:
+    def delete_subscription(self, usps_subscription_id: str, etag: str) -> dict[str, Any]:
         """Delete a subscription."""
         logger.debug("Deleting USPS Subscription: %s [%s]", usps_subscription_id, etag)
         response = self._request(

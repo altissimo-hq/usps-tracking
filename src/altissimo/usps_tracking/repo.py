@@ -5,7 +5,7 @@ Requires the ``[firestore]`` extra (firedantic).
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Protocol, cast
 
 from .exceptions import USPSTrackingDetailNotFoundError, USPSTrackingSubscriptionNotFoundError
 from .models import USPSTrackingDetail, USPSTrackingSubscription
@@ -44,10 +44,10 @@ class USPSTrackingRepo:
             USPSTrackingDetailNotFoundError: If not found.
         """
         try:
-            from firedantic import ModelNotFoundError  # noqa: PLC0415
+            from firedantic import ModelNotFoundError
 
             try:
-                return USPSTrackingDetail.get_by_id(tracking_number)
+                return cast("USPSTrackingDetail", USPSTrackingDetail.get_by_id(tracking_number))
             except ModelNotFoundError as e:
                 raise USPSTrackingDetailNotFoundError(f"Tracking detail not found: {tracking_number}") from e
         except ImportError as e:
@@ -57,7 +57,7 @@ class USPSTrackingRepo:
 
     def list_tracking_details(self) -> list[USPSTrackingDetail]:
         """List all tracking details."""
-        return USPSTrackingDetail.find()
+        return cast("list[USPSTrackingDetail]", USPSTrackingDetail.find())
 
     def save_tracking_detail(self, tracking_detail: USPSTrackingDetail) -> None:
         """Persist a tracking detail."""
@@ -74,10 +74,10 @@ class USPSTrackingRepo:
             USPSTrackingSubscriptionNotFoundError: If not found.
         """
         try:
-            from firedantic import ModelNotFoundError  # noqa: PLC0415
+            from firedantic import ModelNotFoundError
 
             try:
-                return USPSTrackingSubscription.get_by_id(usps_subscription_id)
+                return cast("USPSTrackingSubscription", USPSTrackingSubscription.get_by_id(usps_subscription_id))
             except ModelNotFoundError as e:
                 raise USPSTrackingSubscriptionNotFoundError(
                     f"Tracking subscription not found: {usps_subscription_id}"
@@ -90,8 +90,10 @@ class USPSTrackingRepo:
     def list_tracking_subscriptions(self, tracking_number: str | None = None) -> list[USPSTrackingSubscription]:
         """List tracking subscriptions, optionally filtered by tracking number."""
         if tracking_number:
-            return USPSTrackingSubscription.find({"tracking_number": tracking_number})
-        return USPSTrackingSubscription.find()
+            return cast(
+                "list[USPSTrackingSubscription]", USPSTrackingSubscription.find({"tracking_number": tracking_number})
+            )
+        return cast("list[USPSTrackingSubscription]", USPSTrackingSubscription.find())
 
     def save_tracking_subscription(self, tracking_subscription: USPSTrackingSubscription) -> None:
         """Persist a tracking subscription."""
