@@ -2,6 +2,17 @@
 
 USPS tracking & subscription client with optional Firestore persistence.
 
+## Status
+
+This is the USPS integration two Altissimo projects ran until April 1, 2026, kept as a package for reuse. Nothing deploys it now.
+
+- **Subscriptions (webhooks) need a paid USPS contract.** Since April 1, 2026, the Subscriptions-Tracking API is no longer free, so `create_tracking_subscription`, `process_tracking_subscriptions` and the webhook router won't work without one.
+- **Harden the webhook side before using it again.** `USPSServiceSettings.subscription_secret` defaults to a value that is public in this repo, and the router doesn't verify callbacks, so anyone who knows the URL can post a fake notification. Before reuse:
+  - give each deployment its own secret;
+  - verify each callback's `X-HMAC` signature (HMAC-SHA256 of the notification's `timestamp` + raw `payload`, keyed with that secret; confirm against the USPS spec);
+  - act on the re-fetched `detail`, not the payload's `track_info`.
+- **Move to Subscriptions-Tracking v3.2.** This code calls v3.0, which USPS retires on July 31, 2027.
+
 ## Installation
 
 ```bash
